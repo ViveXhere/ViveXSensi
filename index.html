@@ -30,7 +30,7 @@ h2{font-size:20px;margin:0 0 8px}p{color:var(--muted);font-size:13px;line-height
 .feature-row{display:flex;align-items:center;gap:13px}.feature-icon{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:#271214;color:#ff6268;font-size:20px;flex-shrink:0}.feature-row h3{margin:0;font-size:15px}.feature-row p{font-size:12px;margin-top:4px}
 .field{display:block;font-size:12px;color:#d7d7d7;margin:15px 0 7px}
 input{width:100%;padding:14px;border:1px solid #333;background:#0b0b0b;border-radius:12px;color:white;outline:none}
-input:focus{border-color:var(--red)}.google-login-wrap{display:flex;justify-content:center;min-height:44px;overflow:hidden}.google-login-wrap iframe{max-width:100%}.qr{height:170px;width:170px;border:1px dashed #555;background:#0b0b0b;border-radius:15px;display:grid;place-items:center;text-align:center;color:#999;font-size:12px;padding:20px;margin:14px auto}
+input:focus{border-color:var(--red)}.google-login-wrap{display:flex;justify-content:center;min-height:52px;overflow:hidden;border:1px solid #343434;border-radius:14px;background:linear-gradient(135deg,#202020,#111);padding:5px;box-shadow:0 8px 22px #0005}.google-login-wrap iframe{max-width:100%;border-radius:10px!important}.qr{height:170px;width:170px;border:1px dashed #555;background:#0b0b0b;border-radius:15px;display:grid;place-items:center;text-align:center;color:#999;font-size:12px;padding:20px;margin:14px auto}
 .upi{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #303030;background:#0b0b0b;border-radius:12px;padding:12px;font-size:13px}.copy{background:#242424;border:1px solid #414141;color:white;padding:8px 10px;border-radius:8px;font-size:11px}
 .status{display:none;margin-top:12px;padding:12px;border-radius:11px;font-size:12px;line-height:1.45}.status.show{display:block}.status.warn{background:#291a0d;color:#ffd59d;border:1px solid #5c3c18}.status.good{background:#10271a;color:#a4f0c3;border:1px solid #205c3a}
 .bottom-nav{position:fixed;z-index:5;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:#0c0c0cf2;backdrop-filter:blur(18px);border-top:1px solid #2c2c2c;display:none;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -133,9 +133,13 @@ const CONFIG = {
 };
 let signedInUser = null;
 let googleInitialized = false;
+let previousScreen = "welcome";
+const SESSION_KEY = "vivexSensiGoogleSessionV1";
 const screens = [...document.querySelectorAll(".screen")];
 const bottomNav = document.getElementById("bottomNav");
 function showScreen(id) {
+  const current = document.querySelector(".screen.active");
+  if (id === "guide" && current && current.id !== "guide") previousScreen = current.id;
   screens.forEach(s => s.classList.toggle("active", s.id === id));
   bottomNav.classList.toggle("visible", id === "dashboard");
   window.scrollTo({top:0,behavior:"smooth"});
@@ -173,7 +177,8 @@ async function onGoogleCredential(response) {
   try {
     const payload = decodeJwtPayload(response.credential);
     if (!payload.email || payload.email_verified !== true) throw new Error("Verified Google email se sign in karo.");
-    signedInUser = { idToken: response.credential, email: payload.email.toLowerCase(), name: payload.name || payload.given_name || "Google user" };
+    signedInUser = { idToken: response.credential, email: payload.email.toLowerCase(), name: payload.name || payload.given_name || "Google user", exp: Number(payload.exp || 0) };
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(signedInUser)); } catch (_) {}
     document.getElementById("payEmail").value = signedInUser.email;
     document.getElementById("payEmail").readOnly = true;
     document.getElementById("accountName").textContent = signedInUser.name;
@@ -197,7 +202,7 @@ function initializeGoogleLogin() {
   googleInitialized = true;
   google.accounts.id.initialize({ client_id: CONFIG.GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false, cancel_on_tap_outside: true });
   google.accounts.id.renderButton(document.getElementById("googleBtn"), {
-    type: "standard", theme: "filled_black", size: "large", text: "signin_with", shape: "rectangular", logo_alignment: "left", width: Math.min(360, Math.max(240, window.innerWidth - 80))
+    type: "standard", theme: "outline", size: "large", text: "continue_with", shape: "pill", logo_alignment: "left", width: Math.min(360, Math.max(240, window.innerWidth - 100))
   });
 }
 const googleWait = setInterval(() => {
@@ -206,6 +211,32 @@ const googleWait = setInterval(() => {
 setTimeout(() => {
   if (!googleInitialized) showStatus("loginStatus", "Google sign-in load nahi hua. Internet connection aur OAuth settings check karo.", "warn");
 }, 8000);
+
+async function restoreSavedSession() {
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch (_) { saved = null; }
+  if (!saved || !saved.idToken || !saved.email || (saved.exp && Date.now() >= saved.exp * 1000)) {
+    try { localStorage.removeItem(SESSION_KEY); } catch (_) {}
+    return;
+  }
+  signedInUser = saved;
+  document.getElementById("payEmail").value = saved.email;
+  document.getElementById("payEmail").readOnly = true;
+  document.getElementById("accountName").textContent = saved.name || "Google user";
+  document.getElementById("accountEmail").textContent = saved.email;
+  // Restore the portal after reload; the backend re-verifies the token before trusting it.
+  showScreen("welcome");
+  try {
+    const data = await callBackend({ action: "checkAccess", idToken: saved.idToken });
+    if (!data.ok) throw new Error(data.error || "Session expired");
+    showStatus("welcomeStatus", data.status === "Active" ? "Welcome back. Your access is active." : "Welcome back. Tap Start ViveX Sensi to continue activation.", data.status === "Active" ? "good" : "warn");
+  } catch (err) {
+    signedInUser = null;
+    try { localStorage.removeItem(SESSION_KEY); } catch (_) {}
+    showScreen("login");
+    showStatus("loginStatus", "Your saved sign-in expired. Please sign in with Google again.", "warn");
+  }
+}
 
 document.getElementById("startBtn").addEventListener("click", async () => {
   if (!signedInUser) { showScreen("login"); return; }
@@ -229,29 +260,4 @@ document.getElementById("paymentForm").addEventListener("submit", async e => {
     showStatus("paymentStatus", "Submitted successfully. Review status: Pending. Manual verification ke baad access activate hoga.", "good");
     document.getElementById("payUtr").value = "";
   } catch (err) { showStatus("paymentStatus", err.message || "Submission fail hua. Please try again.", "warn"); }
-  finally { submitButton.disabled = false; submitButton.textContent = "SUBMIT FOR VERIFICATION"; }
-});
-document.getElementById("tutorialBtn").addEventListener("click",openTutorial);
-document.getElementById("tutorialGuide").addEventListener("click",openTutorial);
-document.getElementById("guideTop").addEventListener("click",()=>showScreen("guide"));
-document.getElementById("guideDash").addEventListener("click",()=>showScreen("guide"));
-document.getElementById("guideBack").addEventListener("click",()=>showScreen(signedInUser?"welcome":"login"));
-document.getElementById("backWelcome").addEventListener("click",()=>showScreen("welcome"));
-document.getElementById("upiValue").textContent=CONFIG.UPI_ID;
-if (CONFIG.UPI_QR_IMAGE_URL) {
-  const qr = document.getElementById("upiQr"); qr.innerHTML = "";
-  const img = document.createElement("img"); img.src = CONFIG.UPI_QR_IMAGE_URL; img.alt = "UPI payment QR code"; img.style.cssText = "width:100%;height:100%;object-fit:contain;border-radius:10px"; qr.appendChild(img);
-}
-document.getElementById("copyUpi").addEventListener("click",async()=>{
-  try { await navigator.clipboard.writeText(CONFIG.UPI_ID); document.getElementById("copyUpi").textContent="COPIED"; setTimeout(()=>document.getElementById("copyUpi").textContent="COPY",1300); }
-  catch(e) { alert("UPI ID: " + CONFIG.UPI_ID); }
-});
-document.querySelectorAll(".nav-btn").forEach(btn=>btn.addEventListener("click",()=>{
-  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b===btn));
-  document.getElementById("dashTitle").textContent=btn.dataset.tab;
-  const descriptions={"Settings":"Device settings and configuration options will be added here.","Sensi BOT":"Your Sensi assistant interface will be added here.","Tricks":"Tips, tricks and tutorial content will be added here."};
-  document.getElementById("dashPlaceholder").innerHTML="<div><div style='font-size:27px;margin-bottom:8px'>✦</div><b>"+btn.dataset.tab+"</b><br>"+descriptions[btn.dataset.tab]+"</div>";
-}));
-</script>
-</body>
-</html>
+  finally { submitButton.disabled = false; submitButton.textContent = "SUBMIT F
