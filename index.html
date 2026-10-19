@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#090909">
+<title>ViveX Sensi</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{color-scheme:dark;--bg:#080808;--panel:#121212;--panel2:#191919;--red:#ff3038;--red2:#b80e19;--text:#f5f5f5;--muted:#a3a3a3;--line:#292929;--green:#42d985}
+*{box-sizing:border-box}
+body{margin:0;background:#080808;color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100dvh}
+button,input{font:inherit}button{cursor:pointer}
+.app{max-width:520px;min-height:100dvh;margin:0 auto;padding:18px 16px calc(92px + env(safe-area-inset-bottom))}
+.screen{display:none;animation:fade .18s ease}.screen.active{display:block}#login.active,#welcome.active{display:flex;flex-direction:column;justify-content:center;min-height:calc(100dvh - 36px - env(safe-area-inset-bottom))}
+@keyframes fade{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.brand{text-align:center;margin:0 0 24px}.logo{width:76px;height:76px;margin:0 auto 18px;border:1px solid #4a2023;border-radius:20px;display:grid;place-items:center;background:#151011;color:var(--red);font-size:27px;font-weight:950;letter-spacing:-2px}
+h1{font-size:27px;letter-spacing:.2px;margin:0;font-weight:850}h1 .x-red,h1 .sensi-red{color:var(--red)}.subtitle{color:var(--muted);font-size:13px;margin-top:9px;line-height:1.5}
+.card{background:#111;border:1px solid var(--line);border-radius:18px;padding:20px;margin:14px 0}
+.eyebrow{font-size:10px;letter-spacing:2px;color:var(--red);font-weight:800;text-transform:uppercase;margin-bottom:9px}
+h2{font-size:20px;margin:0 0 8px}p{color:var(--muted);font-size:13px;line-height:1.55;margin:7px 0 0}
+.btn{width:100%;border:0;border-radius:13px;padding:15px 16px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:10px;transition:transform .12s,filter .12s}
+.btn:active{transform:scale(.99)}.primary{background:#b91520;color:white}.secondary{background:#1c1c1c;color:#fff;border:1px solid #343434}.google-g{width:22px;height:22px;border-radius:50%;background:#fff;color:#4285f4;display:grid;place-items:center;font-weight:900}
+.note{border:1px solid #3a2929;background:#211314;border-radius:12px;padding:12px;color:#c9b6b7;font-size:11px;line-height:1.5;margin-top:14px}
+.topbar{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:20;display:flex;justify-content:space-between;align-items:center;gap:10px;width:min(520px,100%);padding:calc(12px + env(safe-area-inset-top)) 16px 13px;border-bottom:1px solid var(--line);margin:0;background:#080808}
+.screen:not(#login){padding-top:calc(62px + env(safe-area-inset-top))}.wordmark{font-family:Inter,system-ui,sans-serif;font-weight:850;letter-spacing:-.6px;font-size:19px}.wordmark span{color:var(--red)}
+.toplink{border:1px solid #383838;border-radius:10px;background:#151515;color:#ddd;padding:9px 11px;font-size:11px;font-weight:700}
+.welcome{padding:21px 0 10px}.welcome h2{font-size:25px;line-height:1.2}.welcome h2 span{color:var(--red)}
+.small-label{font-size:10px;color:var(--muted);letter-spacing:1.6px;text-transform:uppercase}
+.feature-row{display:flex;align-items:center;gap:13px}.feature-icon{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:#271214;color:#ff6268;font-size:20px;flex-shrink:0}.feature-row h3{margin:0;font-size:15px}.feature-row p{font-size:12px;margin-top:4px}
+.field{display:block;font-size:12px;color:#d7d7d7;margin:15px 0 7px}
+input{width:100%;padding:14px;border:1px solid #333;background:#0b0b0b;border-radius:12px;color:white;outline:none}
+input:focus{border-color:var(--red)}.google-login-wrap{display:flex;align-items:center;justify-content:center;width:100%;min-width:0;min-height:58px;overflow:hidden;border:1px solid #343434;border-radius:12px;background:#151515;padding:4px}.google-login-wrap>div{max-width:100%!important}.google-login-wrap iframe{display:block;max-width:100%!important;border-radius:10px!important}.qr{height:170px;width:170px;border:1px dashed #555;background:#0b0b0b;border-radius:15px;display:grid;place-items:center;text-align:center;color:#999;font-size:12px;padding:20px;margin:14px auto}
+.upi{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #303030;background:#0b0b0b;border-radius:12px;padding:12px;font-size:13px}.copy{background:#242424;border:1px solid #414141;color:white;padding:8px 10px;border-radius:8px;font-size:11px}
+.status{display:none;margin-top:12px;padding:12px;border-radius:11px;font-size:12px;line-height:1.45}.status.show{display:block}.status.warn{background:#291a0d;color:#ffd59d;border:1px solid #5c3c18}.status.good{background:#10271a;color:#a4f0c3;border:1px solid #205c3a}
+.bottom-nav{position:fixed;z-index:5;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);padding:10px 14px calc(10px + env(safe-area-inset-bottom));background:#0c0c0cf2;backdrop-filter:blur(18px);border-top:1px solid #2c2c2c;display:none;grid-template-columns:repeat(3,1fr);gap:8px}
+.bottom-nav.visible{display:grid}.nav-btn{border:0;background:transparent;color:#8e8e8e;border-radius:12px;padding:9px 4px;font-size:10px;font-weight:750;display:flex;flex-direction:column;gap:5px;align-items:center}.nav-btn .ico{font-size:18px}.nav-btn.active{color:#ff4a50;background:#281214}
+.dash-hero{padding:22px;border-radius:18px;border:1px solid #492024;background:#171011;margin-bottom:14px}.dash-hero h2{font-size:23px}.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #31533d;color:#8ee5ac;background:#102319;border-radius:30px;padding:6px 9px;font-size:10px;margin-top:13px}
+.placeholder{min-height:155px;display:grid;place-items:center;text-align:center;border:1px dashed #393939;border-radius:16px;padding:22px;color:#777;font-size:12px;line-height:1.5}
+.section-title{font-size:12px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;margin:22px 0 10px;color:#c6c6c6}
+.tiny{font-size:10px;color:#777;text-align:center;margin:17px 0}
+@media(min-width:521px){body{padding:0 0 20px}.app{border-left:1px solid #171717;border-right:1px solid #171717}}
+
+/* Dashboard tools pages */
+.tool-hero{padding:19px;border:1px solid #3a2022;background:#151011;border-radius:16px;margin-bottom:14px}
+.tool-hero .eyebrow{margin-bottom:7px}.tool-hero h2{font-size:23px;margin-bottom:5px}.tool-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}.tool-tile{min-width:0;background:#121212;border:1px solid #292929;border-radius:14px;padding:14px}.tile-icon{width:34px;height:34px;border-radius:10px;background:#281416;color:#ff4a50;display:grid;place-items:center;font-size:17px;margin-bottom:12px}.tool-tile b{font-size:13px;display:block}.tool-tile p{font-size:11px;margin-top:5px}.tool-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #262626}.tool-row:last-child{border-bottom:0}.tool-row b{font-size:13px}.tool-row small{display:block;color:#999;font-size:11px;margin-top:4px;line-height:1.4}.mini-chip{font-size:10px;color:#ff7378;background:#291416;border:1px solid #482125;border-radius:20px;padding:6px 8px;white-space:nowrap}.tool-select{max-width:145px;background:#0b0b0b;color:#eee;border:1px solid #3a3a3a;border-radius:9px;padding:9px;font-size:12px}.tool-action{background:#b91520;color:white;border:0;border-radius:10px;padding:11px 13px;font-size:11px;font-weight:800}.bot-messages{display:flex;flex-direction:column;gap:10px;margin:14px 0}.chat-bubble{max-width:92%;padding:12px 13px;border-radius:13px;font-size:12px;line-height:1.5;background:#171717;border:1px solid #2b2b2b;color:#ddd}.chat-bubble.bot{align-self:flex-start;border-left:3px solid #b91520}.chat-bubble.user{align-self:flex-end;background:#291416;border-color:#4b2025}.bot-compose{display:flex;gap:8px;margin-top:12px}.bot-compose input{min-width:0;padding:12px;font-size:12px}.bot-compose button{flex-shrink:0}.trick-card{display:flex;gap:12px;align-items:flex-start;background:#121212;border:1px solid #292929;border-radius:14px;padding:14px;margin:10px 0}.trick-number{width:35px;height:35px;flex-shrink:0;display:grid;place-items:center;border-radius:10px;background:#281416;color:#ff535a;font-weight:850}.trick-card h3{font-size:14px;margin:1px 0 5px}.trick-card p{font-size:11px;margin:0}.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.tag{font-size:9px;color:#bdbdbd;border:1px solid #343434;border-radius:20px;padding:5px 7px}
+
+
+.social-links{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.social-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 10px;border:1px solid #393939;border-radius:12px;background:#151515;color:#f5f5f5;text-decoration:none;font-weight:750;font-size:12px}.social-btn .social-dot{color:#ff3038;font-size:16px}.editable-box{width:100%;min-height:115px;resize:vertical;line-height:1.55;font-size:13px}.account-line{display:flex;align-items:center;gap:12px}.account-avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#281416;color:#ff4a50;font-weight:900;flex-shrink:0}.report-metric{background:#121212;border:1px solid #2d2d2d;border-radius:13px;padding:14px;margin:10px 0}.report-metric h3{font-size:13px;margin:0 0 6px}.report-metric p{font-size:11px;margin:0 0 10px}.metric-value{font-size:13px;color:#ff666b;font-weight:800}.metric-actions{display:flex;flex-wrap:wrap;gap:8px}.report-back{margin-bottom:12px}.account-actions{margin-top:15px}.warning-copy{color:#d7b4b5;font-size:12px;line-height:1.6}
+</style>
+</head>
+<body>
+<main class="app">
+  <section class="screen active" id="login">
+    <div class="brand">
+      <div class="logo">VX</div>
+      <h1>Vive<span class="x-red">X</span> <span class="sensi-red">SENSI</span></h1>
+      <div class="subtitle">YOUR DEVICE. YOUR CONTROL.<br>Sign in to continue.</div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Member access</div>
+      <h2>Welcome back</h2>
+      <p>Sign in with Google to continue to your ViveX Sensi access page.</p>
+      <div style="height:18px"></div>
+      <div id="googleBtn" class="google-login-wrap" aria-label="Sign in with Google"></div>
+      <div id="loginStatus" class="status warn"></div>
+      <div class="note">Sign in with your Google account. Access is checked against the ViveX Sensi Users sheet.</div>
+    </div>
+    <div class="tiny">ViveXhere · Sensi Access Portal</div>
+  </section>
+
+  <section class="screen" id="welcome">
+    <header class="topbar"><div class="wordmark">Vive<span>X</span>here</div><button class="toplink" id="guideTop">Connects &amp; Guide ↗</button></header>
+    <div class="welcome"><div class="small-label">MEMBER PORTAL</div><h2>Welcome to<br><span>Vive<span style="color:#ff3038">X</span> <span style="color:#ff3038">SENSI</span></span></h2><p>Continue to check your access or learn how to get started.</p></div>
+    <div class="card">
+      <div class="feature-row"><div class="feature-icon">▶</div><div><h3>Start ViveX Sensi</h3><p>Check your account access and open the main dashboard.</p></div></div>
+      <div style="height:18px"></div><button class="btn primary" id="startBtn">START ViveX Sensi <span>→</span></button>
+    </div>
+    <div class="card">
+      <div class="feature-row"><div class="feature-icon">ⓘ</div><div><h3>Access Tutorial</h3><p>Watch the tutorial to learn how the access process works.</p></div></div>
+      <div style="height:16px"></div><button class="btn secondary" id="tutorialBtn">WATCH TUTORIAL ↗</button>
+    </div>
+    <div class="card"><div class="eyebrow">About ViveX Sensi</div><p>A mobile-first gaming utility portal. Dashboard tools and guides will be added after the access flow is connected.</p></div>
+    <div id="welcomeStatus" class="status warn"></div>
+  </section>
+
+  <section class="screen" id="payment">
+    <header class="topbar"><div class="wordmark">Vive<span>X</span>here</div><button class="toplink" id="backWelcome">← Back</button></header>
+    <div class="welcome"><div class="small-label">MEMBERSHIP ACCESS</div><h2>Activate your<br><span>Vive<span style="color:#ff3038">X</span> <span style="color:#ff3038">SENSI</span></span></h2><p>Complete the payment, then submit the details below for manual verification.</p></div>
+    <div class="card">
+      <div class="eyebrow">Step 01 · Pay</div><h2>Scan &amp; Pay</h2>
+      <div class="qr" id="upiQr">Add your UPI QR image in the website HTML</div>
+      <div class="small-label" style="margin-bottom:8px">UPI ID</div>
+      <div class="upi"><span id="upiValue">your-upi-id@bank</span><button class="copy" id="copyUpi">COPY</button></div>
+      <p>Only submit the form after completing your payment. Keep your UTR/reference number handy.</p>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Step 02 · Submit details</div><h2>Payment verification</h2>
+      <form id="paymentForm">
+        <label class="field" for="payEmail">Email address</label><input id="payEmail" type="email" placeholder="Enter your Gmail" required>
+        <label class="field" for="payName">Your name</label><input id="payName" type="text" placeholder="Enter your name" required>
+        <label class="field" for="payUtr">Payment UTR / reference</label><input id="payUtr" type="text" placeholder="Enter payment UTR" minlength="6" required>
+        <div style="height:17px"></div><button class="btn primary" type="submit">SUBMIT FOR VERIFICATION</button>
+      </form>
+      <div id="paymentStatus" class="status warn"></div>
+      <div class="note">Your request will be marked Pending until payment is manually checked. Submitting this form does not activate access automatically.</div>
+    </div>
+  </section>
+
+  <section class="screen" id="dashboard">
+    <header class="topbar"><div class="wordmark">Vive<span>X</span>here</div><button class="toplink" id="guideDash">Connects &amp; Guide ↗</button></header>
+    <div class="dash-hero"><div class="small-label">ViveX Sensi Portal</div><h2>Main dashboard</h2><p>Your access portal is ready. Tool features will be added next based on your instructions.</p><div class="pill">● ACCESS ACTIVE</div></div>
+    <div class="section-title" id="dashTitle">Overview</div>
+    <div id="dashPlaceholder"></div>
+    <div id="accountName" hidden>Google user</div><div id="accountEmail" hidden>Preview account · not signed in</div>
+  </section>
+
+  <section class="screen" id="guide">
+    <header class="topbar"><div class="wordmark">Vive<span>X</span>here</div><button class="toplink" id="guideBack">← Back</button></header>
+    <div class="welcome"><div class="small-label">HELP CENTER</div><h2>Connects <span>&amp; Guide</span></h2><p>Follow the official channels and check the instructions below.</p></div>
+    <div class="social-links"><a class="social-btn" id="youtubeSocial" href="https://youtube.com/" target="_blank" rel="noopener noreferrer"><span class="social-dot">▶</span> YouTube</a><a class="social-btn" id="instagramSocial" href="https://instagram.com/" target="_blank" rel="noopener noreferrer"><span class="social-dot">◎</span> Instagram</a></div>
+    <div class="card"><div class="eyebrow">How to use</div><h2>Instructions</h2><textarea class="editable-box" id="howToUseText" placeholder="Yahan apne instructions likho..." aria-label="How to use instructions"></textarea><p>Is box ka text tum HTML mein khud edit kar sakte ho.</p></div>
+    <div class="card"><div class="eyebrow">Warning</div><h2>Please read</h2><textarea class="editable-box" id="warningText" placeholder="Yahan apni warning ya notice likho..." aria-label="Warning text"></textarea><p>Apni warning yahan likho; publish karne se pehle file mein save karna.</p></div>
+  </section>
+</main>
+
+<nav class="bottom-nav" id="bottomNav" aria-label="Main navigation">
+  <button class="nav-btn active" data-tab="Settings"><span class="ico">⚙</span>Settings</button>
+  <button class="nav-btn" data-tab="Sensi BOT"><span class="ico">⌘</span>Sensi BOT</button>
+  <button class="nav-btn" data-tab="Tricks"><span class="ico">✦</span>Tricks</button>
+</nav>
+
+<script>
+/* Public website configuration. Never add a Google Client Secret here. */
+const CONFIG = {
+  GOOGLE_CLIENT_ID: "830557350336-bt2aupt428971ndra006pgtfi2c5km3l.apps.googleusercontent.com",
+  BACKEND_URL: "https://script.google.com/macros/s/AKfycbzepLeXgkODmK91p_DBk7-hUCDW0psEVQDUVpJP9ZvUAXQrVJ4BCE-KxBFUVdwCv03i/exec",
+  TUTORIAL_URL: "PASTE_YOUTUBE_TUTORIAL_URL_HERE",
+  YOUTUBE_URL: "https://youtube.com/",
+  INSTAGRAM_URL: "https://instagram.com/",
+  UPI_ID: "your-upi-id@bank",
+  UPI_QR_IMAGE_URL: ""
+};
+let signedInUser = null;
+let googleInitialized = false;
+let previousScreen = "welcome";
+const SESSION_KEY = "vivexSensiGoogleSessionV1";
+const screens = [...document.querySelectorAll(".screen")];
+const bottomNav = document.getElementById("bottomNav");
+function showScreen(id) {
+  const current = document.querySelector(".screen.active");
+  if (id === "guide" && current && current.id !== "guide") previousScreen = current.id;
+  screens.forEach(s => s.classList.toggle("active", s.id === id));
+  bottomNav.classList.toggle("visible", id === "dashboard");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function showStatus(id, message, kind="warn") {
+  const el=document.getElementById(id); if(!el) return;
+  el.textContent=message; el.className="status show "+kind;
+}
+function backendReady() {
+  return CONFIG.BACKEND_URL.startsWith("https://script.google.com/") || CONFIG.BACKEND_URL.startsWith("https://script.googleusercontent.com/");
+}
+function decodeJwtPayload(token) {
+  const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+  const binary = atob(part.padEnd(Math.ceil(part.length / 4) * 4, '='));
+  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+function openTutorial() {
+  if (CONFIG.TUTORIAL_URL.startsWith("https://www.youtube.com/") || CONFIG.TUTORIAL_URL.startsWith("https://youtu.be/")) {
+    window.open(CONFIG.TUTORIAL_URL,"_blank","noopener,noreferrer");
+  } else alert("CONFIG mein apna YouTube tutorial link add karo.");
+}
+async function callBackend(payload) {
+  if (!backendReady()) throw new Error("Apps Script Web App URL abhi index.html ke CONFIG mein add nahi hai.");
+  const response = await fetch(CONFIG.BACKEND_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(payload),
+    redirect: "follow"
+  });
+  if (!response.ok) throw new Error("Backend response error (" + response.status + "). Deployment access aur URL check karo.");
+  return await response.json();
+}
+async function onGoogleCredential(response) {
+  try {
+    const payload = decodeJwtPayload(response.credential);
+    if (!payload.email || payload.email_verified !== true) throw new Error("Verified Google email se sign in karo.");
+    signedInUser = { idToken: response.credential, email: payload.email.toLowerCase(), name: payload.name || payload.given_name || "Google user", exp: Number(payload.exp || 0) };
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(signedInUser)); } catch (_) {}
+    document.getElementById("payEmail").value = signedInUser.email;
+    document.getElementById("payEmail").readOnly = true;
+    document.getElementById("accountName").textContent = signedInUser.name;
+    document.getElementById("accountEmail").textContent = signedInUser.email;
+    showStatus("loginStatus", "Google sign-in complete. Checking your account…", "good");
+    showScreen("welcome");
+    try {
+      const data = await callBackend({ action: "checkAccess", idToken: signedInUser.idToken });
+      if (!data.ok) throw new Error(data.error || "Access check failed.");
+      if (data.status === "Active") showStatus("welcomeStatus", "Access active. You can start ViveX Sensi.", "good");
+      else showStatus("welcomeStatus", "Login successful. Start ViveX Sensi to view the payment/activation page.", "warn");
+    } catch (err) {
+      showStatus("welcomeStatus", "Login hua, lekin access server check nahi ho saka: " + err.message, "warn");
+    }
+  } catch (err) {
+    showStatus("loginStatus", err.message || "Google sign-in failed. Please try again.", "warn");
+  }
+}
+function initializeGoogleLogin() {
+  if (googleInitialized || !window.google || !google.accounts || !google.accounts.id) return;
+  googleInitialized = true;
+  google.accounts.id.initialize({ client_id: CONFIG.GOOGLE_CLIENT_ID, callback: onGoogleCredential, auto_select: false, cancel_on_tap_outside: true });
+  const buttonHost = document.getElementById("googleBtn");
+  const safeWidth = Math.max(200, Math.min(320, Math.floor(buttonHost.getBoundingClientRect().width - 12)));
+  google.accounts.id.renderButton(buttonHost, {
+    type: "standard", theme: "outline", size: "large", text: "continue_with", shape: "rectangular", logo_alignment: "left", width: safeWidth
+  });
+}
+const googleWait = setInterval(() => {
+  if (window.google && google.accounts && google.accounts.id) { clearInterval(googleWait); initializeGoogleLogin(); }
+}, 250);
+setTimeout(() => {
+  if (!googleInitialized) showStatus("loginStatus", "Google sign-in load nahi hua. Internet connection aur OAuth settings check karo.", "warn");
+}, 8000);
+
+async function restoreSavedSession() {
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch (_) { saved = null; }
+  if (!saved || !saved.idToken || !saved.email || (saved.exp && Date.now() >= saved.exp * 1000)) {
+    try { localStorage.removeItem(SESSION_KEY); } catch (_) {}
+    return;
+  }
+  signedInUser = saved;
+  document.getElementById("payEmail").value = saved.email;
+  document.getElementById("payEmail").readOnly = true;
+  document.getElementById("accountName").textContent = saved.name || "Google user";
+  document.getElementById("accountEmail").textContent = saved.email;
+  // Restore the portal after reload; the backend re-verifies the token before trusting it.
+  showScreen("welcome");
+  try {
+    const data = await callBackend({ action: "checkAccess", idToken: saved.idToken });
+    if (!data.ok) throw new Error(data.error || "Session expired");
+    showStatus("welcomeStatus", data.status === "Active" ? "Welcome back. Your access is active." : "Welcome back. Tap Start ViveX Sensi to continue activation.", data.status === "Active" ? "good" : "warn");
+  } catch (err) {
+    signedInUser = null;
+    try { localStorage.removeItem(SESSION_KEY); } catch (_) {}
+    showScreen("login");
+    showStatus("loginStatus", "Your saved sign-in expired. Please sign in with Google again.", "warn");
+  }
+}
+
+document.getElementById("startBtn").addEventListener("click", async () => {
+  if (!signedInUser) { showScreen("login"); return; }
+  try {
+    const data = await callBackend({ action: "checkAccess", idToken: signedInUser.idToken });
+    if (!data.ok) throw new Error(data.error || "Access check failed.");
+    if (data.status === "Active") showScreen("dashboard");
+    else showScreen("payment");
+  } catch (err) { showStatus("welcomeStatus", "Access check fail hua: " + err.message, "warn"); }
+});
+document.getElementById("paymentForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!signedInUser) { showStatus("paymentStatus", "Pehle Google se login karo.", "warn"); showScreen("login"); return; }
+  const name = document.getElementById("payName").value.trim();
+  const utr = document.getElementById("payUtr").value.trim();
+  const submitButton = e.currentTarget.querySelector('button[type="submit"]');
+  submitButton.disabled = true; submitButton.textContent = "SUBMITTING…";
+  try {
+    const data = await callBackend({ action: "submitPayment", idToken: signedInUser.idToken, email: signedInUser.email, name, utr });
+    if (!data.ok) throw new Error(data.error || "Payment details submit nahi hue.");
+    showStatus("paymentStatus", "Submitted successfully. Review status: Pending. Manual verification ke baad access activate hoga.", "good");
+    document.getElementById("payUtr").value = "";
+  } catch (err) { showStatus("paymentStatus", err.message || "Submission fail hua. Please try again.", "warn"); }
+  finally { submitButton.disabled = false; submitButton.textContent = "SUBMIT FOR VERIFICATION"; }
+});
+document.getElementById("tutorialBtn").addEventListener("click",openTutorial);
+
+document.getElementById("guideTop").addEventListener("click",()=>showScreen("guide"));
+document.getElementById("guideDash").addEventListener("click",()=>showScreen("guide"));
+document.getElementById("guideBack").addEventListener("click",()=>showScreen(signedInUser ? previousScreen : "login"));
+document.getElementById("backWelcome").addEventListener("click",()=>showScreen("welcome"));
+document.getElementById("upiValue").textContent=CONFIG.UPI_ID;
+document.getElementById("youtubeSocial").href=CONFIG.YOUTUBE_URL;
+document.getElementById("instagramSocial").href=CONFIG.INSTAGRAM_URL;
+if (CONFIG.UPI_QR_IMAGE_URL) {
+  const qr = document.getElementById("upiQr"); qr.innerHTML = "";
+  const img = document.createElement("img"); img.src = CONFIG.UPI_QR_IMAGE_URL; img.alt = "UPI payment QR code"; img.style.cssText = "width:100%;height:100%;object-fit:contain;border-radius:10px"; qr.appendChild(img);
+}
+document.getElementById("copyUpi").addEventListener("click",async()=>{
+  try { await navigator.clipboard.writeText(CONFIG.UPI_ID); document.getElementById("copyUpi").textContent="COPIED"; setTimeout(()=>document.getElementById("copyUpi").textContent="COPY",1300); }
+  catch(e) { alert("UPI ID: " + CONFIG.UPI_ID); }
+});
+const dashPlaceholder = document.getElementById("dashPlaceholder");
+function renderTab(tab){
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
+  document.getElementById("dashTitle").textContent=tab;
+  if(tab==="Settings"){
+    dashPlaceholder.innerHTML=`
+      <div class="dash-hero"><div class="eyebrow">ACCESS STATUS</div><h2>Access Granted</h2><p>Your ViveX Sensi portal session is active.</p><div class="pill">● ACCESS GRANTED</div></div>
+      <div class="card"><div class="eyebrow">Account</div><div class="account-line"><div class="account-avatar">VX</div><div style="min-width:0"><h2 id="settingsAccountName">${escapeHtml(signedInUser?.name || "Google user")}</h2><p id="settingsAccountEmail" style="overflow-wrap:anywhere">${escapeHtml(signedInUser?.email || "Not signed in")}</p></div></div><div class="account-actions"><button class="btn secondary" id="logoutBtn">LOG OUT</button></div></div>
+      <div class="card"><div class="feature-row"><div class="feature-icon">▦</div><div><h3>Device Report</h3><p>Run browser-based touch, swipe, colour and frame-rate checks, then export a text report.</p></div></div><div style="height:15px"></div><button class="btn primary" id="openDeviceReport">DEVICE REPORT →</button></div>`;
+    document.getElementById("logoutBtn").onclick=logoutUser;
+    document.getElementById("openDeviceReport").onclick=renderDeviceReport;
+  }else if(tab==="Sensi BOT"){
+    dashPlaceholder.innerHTML=`<div class="tool-hero"><div class="eyebrow">COMING LATER</div><h2>Sensi BOT</h2><p>AI chat assistant will be designed in a later update.</p></div><div class="placeholder">Sensi BOT is paused for now.<br>We will build this page next.</div>`;
+  }else{
+    dashPlaceholder.innerHTML=`<div class="tool-hero"><div class="eyebrow">SKILL LIBRARY</div><h2>Tricks</h2><p>Short practice routines to build consistency in training mode.</p></div>
+    <div class="trick-card"><div class="trick-number">01</div><div><h3>Improve Reaction Time</h3><p>Use short 3–5 minute training rounds. Focus on noticing the target, reacting calmly, and repeating the same drill. Rest between rounds and track consistency rather than speed alone.</p><div class="tag-row"><span class="tag">Warm-up</span><span class="tag">Consistency</span></div></div></div>
+    <div class="trick-card"><div class="trick-number">02</div><div><h3>Improve Drag Accuracy</h3><p>Start with a comfortable fire-button position and practise small, controlled upward swipes. Change one sensitivity value at a time and keep the setup only if your results become more consistent.</p><div class="tag-row"><span class="tag">Drag control</span><span class="tag">Practice drill</span></div></div></div>`;
+  }
+}
+function escapeHtml(value){return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function logoutUser(){
+  signedInUser=null;
+  try{localStorage.removeItem(SESSION_KEY);}catch(_){ }
+  showScreen("login");
+  document.getElementById("bottomNav").classList.remove("visible");
+  showStatus("loginStatus","You have been logged out.","good");
+  if(window.google?.accounts?.id){try{google.accounts.id.disableAutoSelect();}catch(_){} }
+}
+let reportStats={touchSamples:[],swipes:[],fps:[]};
+function renderDeviceReport(){
+  dashPlaceholder.innerHTML=`<button class="btn secondary report-back" id="reportBack">← BACK TO SETTINGS</button>
+  <div class="tool-hero"><div class="eyebrow">DEVICE REPORT</div><h2>Device Diagnostics</h2><p>Tests run in this browser only. Results are estimates and do not change your phone or game settings.</p></div>
+  <div class="report-metric"><h3>Scan Touch Sample Rate and Response</h3><p>Tap the test area repeatedly. The browser measures event intervals; it cannot read the phone's true hardware touch-sampling specification.</p><div class="metric-value" id="touchResult">Not tested</div><div style="height:10px"></div><button class="tool-action" id="touchTest">START TOUCH TEST</button><div id="touchPad" style="display:none;margin-top:12px;min-height:95px;border:1px dashed #5a3336;border-radius:12px;display:none;align-items:center;justify-content:center;text-align:center;color:#ff7378;padding:12px;touch-action:manipulation">Tap here repeatedly</div></div>
+  <div class="report-metric"><h3>Swipe Sensitivity and Accuracy</h3><p>Swipe inside the test area. Shows the measured swipe distance and duration, not your in-game sensitivity value.</p><div class="metric-value" id="swipeResult">Not tested</div><div id="swipePad" style="margin-top:10px;min-height:105px;border:1px dashed #5a3336;border-radius:12px;display:flex;align-items:center;justify-content:center;text-align:center;color:#ff7378;padding:12px;touch-action:none">Swipe here</div></div>
+  <div class="report-metric"><h3>Colours and FPS Scanner</h3><p>Runs a brief animation timing check and displays a colour test. Browser FPS is approximate and can differ from the game's FPS.</p><div style="display:flex;gap:6px;margin:10px 0"><span style="height:24px;flex:1;background:#ff3038;border-radius:5px"></span><span style="height:24px;flex:1;background:#f5f5f5;border-radius:5px"></span><span style="height:24px;flex:1;background:#777;border-radius:5px"></span><span style="height:24px;flex:1;background:#080808;border:1px solid #555;border-radius:5px"></span></div><div class="metric-value" id="fpsResult">Not tested</div><div style="height:10px"></div><button class="tool-action" id="fpsTest">SCAN COLOURS & FPS</button></div>
+  <button class="btn primary" id="downloadReport">DOWNLOAD REPORT (.TXT)</button><p style="font-size:10px;margin-top:10px">Only measurements collected after tapping the test buttons will be included. No data is sent to a server.</p>`;
+  document.getElementById("reportBack").onclick=()=>renderTab("Settings");
+  const touchPad=document.getElementById("touchPad");
+  document.getElementById("touchTest").onclick=()=>{touchPad.style.display="flex";touchPad.textContent="Tap here 10+ times";reportStats.touchSamples=[];let last=0;const handler=e=>{const now=performance.now();if(last)reportStats.touchSamples.push(now-last);last=now;const n=reportStats.touchSamples.length;document.getElementById("touchResult").textContent=`Samples: ${n} · Last event interval: ${n?reportStats.touchSamples[n-1].toFixed(1):"—"} ms`;if(n>=19){touchPad.removeEventListener("pointerdown",handler);const a=reportStats.touchSamples;const avg=a.reduce((x,y)=>x+y,0)/a.length;document.getElementById("touchResult").textContent=`${a.length} intervals · Avg ${avg.toFixed(1)} ms · approx ${(1000/avg).toFixed(1)} events/s`;}};touchPad.addEventListener("pointerdown",handler);};
+  const swipePad=document.getElementById("swipePad");let startPoint=null;swipePad.onpointerdown=e=>{startPoint={x:e.clientX,y:e.clientY,t:performance.now()};swipePad.setPointerCapture?.(e.pointerId);};swipePad.onpointerup=e=>{if(!startPoint)return;const dx=e.clientX-startPoint.x,dy=e.clientY-startPoint.y,dist=Math.hypot(dx,dy),ms=performance.now()-startPoint.t,speed=dist/Math.max(ms,1);const d={distancePx:dist,durationMs:ms,speedPxMs:speed,direction:Math.abs(dx)>Math.abs(dy)?(dx>0?"right":"left"):(dy>0?"down":"up")};reportStats.swipes.push(d);document.getElementById("swipeResult").textContent=`${dist.toFixed(0)} px · ${ms.toFixed(0)} ms · ${speed.toFixed(2)} px/ms · ${d.direction}`;startPoint=null;};
+  document.getElementById("fpsTest").onclick=()=>{const vals=[];let prev=performance.now(),frames=0;document.getElementById("fpsResult").textContent="Scanning for 2 seconds…";const tick=now=>{frames++;if(now-prev>=2000){const fps=frames/((now-prev)/1000);reportStats.fps.push({fps,at:new Date().toISOString()});document.getElementById("fpsResult").textContent=`Estimated browser animation rate: ${fps.toFixed(1)} FPS`;return;}requestAnimationFrame(tick);};requestAnimationFrame(tick);};
+  document.getElementById("downloadReport").onclick=()=>{const touch=reportStats.touchSamples;const avg=touch.length?touch.reduce((a,b)=>a+b,0)/touch.length:null;const latestSwipe=reportStats.swipes.at(-1);const latestFps=reportStats.fps.at(-1);const lines=["ViveXhere — ViveX Sensi Device Report","Generated: "+new Date().toLocaleString(),"Account: "+(signedInUser?.email||"Not available"),"","TOUCH SAMPLE / RESPONSE",touch.length?`Measured ${touch.length} event intervals; average ${avg.toFixed(2)} ms; approximate ${ (1000/avg).toFixed(2)} events/s.`:"Not tested yet.","Note: browser pointer event timing is not the phone's hardware touch-sampling specification.","","SWIPE SENSITIVITY / ACCURACY",latestSwipe?`Distance ${latestSwipe.distancePx.toFixed(1)} px; duration ${latestSwipe.durationMs.toFixed(1)} ms; speed ${latestSwipe.speedPxMs.toFixed(3)} px/ms; direction ${latestSwipe.direction}.`:"No swipe recorded yet.","","COLOURS / FPS",latestFps?`Estimated browser animation rate ${latestFps.fps.toFixed(1)} FPS.`:"FPS test not run yet.","Colour swatches are a visual check only; no calibrated colour measurement was taken.","","This report contains browser estimates only. It does not measure in-game FPS or alter device settings."];const blob=new Blob([lines.join("\\n")],{type:"text/plain;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="ViveXhere_Device_Report.txt";document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);};
+}
+document.querySelectorAll(".nav-btn").forEach(btn=>btn.addEventListener("click",()=>renderTab(btn.dataset.tab)));
+renderTab("Settings");
+
+// Keep the signed-in state across refreshes when the Google ID token is still valid.
+window.addEventListener("load", () => { restoreSavedSession(); });
+</script>
+</body>
+</html>
